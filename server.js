@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 
-const API_Base = "http://host.docker.internal:3000";
+const API_BASE = "http://localhost:3000";
 
 const server = new McpServer({
     name: "todo-mcp",
@@ -11,34 +12,31 @@ const server = new McpServer({
     }
 });
 
-//ツール一覧
+//add
 server.registerTool(
     "add_todo",
     {
-        desctiption: "Add a todo",
-        inputSchema: {
-            type: "object",
-            properties: {
-                title: { type: "string" }
-            },
-            required: ["title"]
-        }
+        description: "Add a todo",
+        inputSchema: z.object({
+            title: z.string(),
+        }),
     },
     async ({ title }) => {
         const res = await fetch(`${API_BASE}/todos`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: args.title })
+            body: JSON.stringify({ title })
         });
         return { content: [{ type: "text", text: JSON.stringify(await res.json()) }] };
     }
 );
 
+//list
 server.registerTool(
     "list_todos",
     {
-        desctiption: "List todos",
-        inputSchema: { type: "object", properties: {} }
+        description: "List todos",
+        inputSchema: z.object({})
     },
     async () => {
         const res = await fetch(`${API_BASE}/todos`);
@@ -46,25 +44,42 @@ server.registerTool(
     }
 );
 
+//delete
 server.registerTool(
     "delete_todo",
     {
-        desctiption: "Delete a todo",
-        inputSchema: {
-            type: "object",
-            properties: {
-                id: { type: "number" }
-            },
-            required: ["id"]
-        }
+        description: "Delete a todo",
+        inputSchema: z.object({
+            id: z.number()
+        })
     },
     async ({ id }) => {
-        if (args.id === 0) {
-            return { content: [{ type: "text", text: JSON.stringify(await res.json()) }] };
+        if (id === 0) {
+            return { content: [{ type: "text", text: "Invalid ID" }] };
         }
 
-        const res = await fetch(`${API_BASE}/todos/${args.id}`, {
+        const res = await fetch(`${API_BASE}/todos/${id}`, {
             method: "DELETE"
+        });
+        return { content: [{ type: "text", text: JSON.stringify(await res.json()) }] };
+    }
+);
+
+//done
+server.registerTool(
+    "done_todo",
+    {
+        description: "done a todo",
+        inputSchema: z.object({
+            id: z.number(),
+            done: z.boolean()
+        })
+    },
+    async ({ id, done }) => {
+        const res = await fetch(`${API_BASE}/todos/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ done })
         });
         return { content: [{ type: "text", text: JSON.stringify(await res.json()) }] };
     }
